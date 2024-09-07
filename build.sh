@@ -9,8 +9,8 @@ source ~/.bashrc && source ~/.profile
 export LC_ALL=C && export USE_CCACHE=1
 ccache -M 100G >/dev/null
 export ARCH=arm64
-export KBUILD_BUILD_HOST=InfixKernel-spaced
-export KBUILD_BUILD_USER="HELLINFIX"
+export KBUILD_BUILD_HOST=InfixKernel-ksu-spaced
+export KBUILD_BUILD_USER="HELLINFIX,AhnafR"
 
 clangbin=clang/bin/clang
 if ! [ -a $clangbin ]; then mkdir clang && cd clang
@@ -60,9 +60,9 @@ rm -rf AnyKernel
 git clone --depth=1 https://github.com/HELLINFIX/AnyKernel3 AnyKernel
 cp out/arch/arm64/boot/Image.gz-dtb AnyKernel
 cd AnyKernel
-zip -r9 InfixKernel-spaced-OSS-Kernel.zip *
+zip -r9 InfixKernel-ksu-spaced-OSS-Kernel.zip *
 curl -sL https://git.io/file-transfer | sh
-./transfer fio InfixKernel-spaced-OSS-Kernel.zip
+./transfer fio InfixKernel-ksu-spaced-OSS-Kernel.zip
 cd ../
 fi
 }

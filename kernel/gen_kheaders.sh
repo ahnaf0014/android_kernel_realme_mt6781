@@ -57,17 +57,17 @@ rm -rf $cpio_dir
 mkdir $cpio_dir
 
 pushd $srctree > /dev/null
-for f in $dir_list;
-	do find "$f" -name "*.h";
-done | $cpio --quiet -pd $cpio_dir
+#for f in $dir_list;
+#	do find "$f" -name "*.h";
+#done | $cpio --quiet -pd $cpio_dir
 
 popd > /dev/null
 
 # The second CPIO can complain if files already exist which can
 # happen with out of tree builds. Just silence CPIO for now.
-for f in $dir_list;
-	do find "$f" -name "*.h";
-done | $cpio --quiet -pd $cpio_dir >/dev/null 2>&1
+#for f in $dir_list;
+#	do find "$f" -name "*.h";
+#done | $cpio --quiet -pd $cpio_dir >/dev/null 2>&1
 
 
 # Remove comments except SDPX lines
