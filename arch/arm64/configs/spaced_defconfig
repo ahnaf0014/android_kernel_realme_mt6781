@@ -6038,4 +6038,11 @@ CONFIG_ARCH_HAS_DEVMEM_IS_ALLOWED=y
 
 # KernelSU
 CONFIG_KSU=y
+<<<<<<< HEAD
 CONFIG_KSU_SUSFS=y
+=======
+
+# KSU_SUSFS
+CONFIG_KSU_SUSFS=y
+CONFIG_KSU_SUSFS_SUS_SU=n
+>>>>>>> c054d397f009 (updated susfs to version 1.4.2)

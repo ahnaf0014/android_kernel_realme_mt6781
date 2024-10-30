@@ -979,6 +979,16 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 	mnt->mnt.mnt_sb = root->d_sb;
 	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
 	mnt->mnt_parent = mnt;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	// here we reorder the mounts that are added after copy_mnt_ns();
+	// make sure it is zygote process
+	if (likely(current->android_kabi_reserved3 & 1)) {
+		mnt->mnt.android_kabi_reserved1 = current->android_kabi_reserved4++;
+	}
+	// Seems no need to reorder the mnt group id for mounts after copy_mnt_ns();
+#endif
+
 	lock_mount_hash();
 	list_add_tail(&mnt->mnt_instance, &root->d_sb->s_mounts);
 	unlock_mount_hash();
@@ -1060,6 +1070,22 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	mnt->mnt.mnt_root = dget(root);
 	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
 	mnt->mnt_parent = mnt;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	// here we reorder the mounts that are added after copy_mnt_ns();
+	// make sure it is zygote process
+	if (likely(current->android_kabi_reserved3 & 1)) {
+		mnt->mnt.android_kabi_reserved1 = current->android_kabi_reserved4++;
+	}
+	// Seems no need to reorder the mnt group id for mounts after copy_mnt_ns();
+
+	// Make all our sus mounts to be cloned private, so that propagation won't happen when they are being umounted,
+	// and let try_umount() to decide what to umount for matched process.
+	if (unlikely(mnt->mnt.mnt_root->d_inode->i_state & 33554432)) {
+		flag &= (~CL_SLAVE | ~CL_SHARED_TO_SLAVE | ~CL_MAKE_SHARED | CL_PRIVATE);
+	}
+#endif
+
 	lock_mount_hash();
 	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
 	unlock_mount_hash();
@@ -1649,7 +1675,10 @@ static inline bool may_mandlock(void)
 static int can_umount(const struct path *path, int flags)
 {
 	struct mount *mnt = real_mount(path->mnt);
+<<<<<<< HEAD
 
+=======
+>>>>>>> c054d397f009 (updated susfs to version 1.4.2)
 	if (flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW))
 		return -EINVAL;
 	if (!may_mount())
@@ -1664,16 +1693,25 @@ static int can_umount(const struct path *path, int flags)
 		return -EPERM;
 	return 0;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> c054d397f009 (updated susfs to version 1.4.2)
 int path_umount(struct path *path, int flags)
 {
 	struct mount *mnt = real_mount(path->mnt);
 	int ret;
+<<<<<<< HEAD
 
 	ret = can_umount(path, flags);
 	if (!ret)
 		ret = do_umount(mnt, flags);
 
+=======
+	ret = can_umount(path, flags);
+	if (!ret)
+		ret = do_umount(mnt, flags);
+>>>>>>> c054d397f009 (updated susfs to version 1.4.2)
 	/* we mustn't call path_put() as that would clear mnt_expiry_mark */
 	dput(path->dentry);
 	mntput_no_expire(mnt);
@@ -2958,6 +2996,11 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
 	struct mount *old;
 	struct mount *new;
 	int copy_flags;
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	int first_entry_mnt_id = 0;
+	int first_entry_mnt_master_group_id = 1;
+	int last_mnt_master_group_id = 0;
+#endif
 
 	BUG_ON(!ns);
 
@@ -3013,6 +3056,36 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
 		while (p->mnt.mnt_root != q->mnt.mnt_root)
 			p = next_mnt(p, old);
 	}
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	// current->android_kabi_reserved3 -> check if current process is zygote 
+	// current->android_kabi_reserved4 -> to record last valid fake mnt id to zygote pid
+	// q->mnt.android_kabi_reserved1 -> fake mnt id
+	// q->mnt.android_kabi_reserved2 -> fake mnt group id (peer id)
+
+	// Here We are only interested in processes of which original mnt namespace belongs to zygote 
+	// Also we just make use of existing 'p' and 'q' mount pointer, no need to delcare extra mount pointer
+	if (likely(current->android_kabi_reserved3 & 1)) {
+		first_entry_mnt_id = list_first_entry(&new_ns->list, struct mount, mnt_list)->mnt_id;
+		list_for_each_entry(q, &new_ns->list, mnt_list) {
+			if (unlikely(q->mnt.mnt_root->d_inode->i_state & 33554432))
+				continue;
+			q->mnt.android_kabi_reserved1 = first_entry_mnt_id++;
+			if (q->mnt_master) {
+				if (likely(last_mnt_master_group_id != q->mnt_master->mnt_group_id)) {
+					q->mnt.android_kabi_reserved2 = first_entry_mnt_master_group_id++;
+				} else {
+					q->mnt.android_kabi_reserved2 = first_entry_mnt_master_group_id;
+				}
+				last_mnt_master_group_id = q->mnt.android_kabi_reserved2;
+			}
+		}
+	}
+	// Assign the last fake mnt_id to current->android_kabi_reserved4 for later use.
+	// should be fine here assuming zygote is forking/unsharing app in one single thread.
+	// Or should we put a lock here?
+	current->android_kabi_reserved4 = first_entry_mnt_id;
+#endif
 	namespace_unlock();
 
 	if (rootmnt)

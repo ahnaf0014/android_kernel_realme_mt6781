@@ -23,7 +23,11 @@
 
 #include <linux/uaccess.h>
 
+<<<<<<< HEAD
 #ifdef CONFIG_KSU_SUSFS
+=======
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+>>>>>>> c054d397f009 (updated susfs to version 1.4.2)
 #include <linux/susfs.h>
 #endif
 
@@ -303,6 +307,11 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
 	int reclen = ALIGN(offsetof(struct linux_dirent64, d_name) + namlen + 1,
 		sizeof(u64));
 
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	if (likely(current_cred()->user->android_kabi_reserved1 & 16777216) && susfs_sus_ino_for_filldir64(ino)) {
+		return 0;
+	}
+#endif
 	buf->error = verify_dirent_name(name, namlen);
 	if (unlikely(buf->error))
 		return buf->error;
